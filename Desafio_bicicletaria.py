@@ -51,5 +51,3 @@ print(b2)
 b2.buzinar()
 b2.parar()
 b2.correndo()
-
-
