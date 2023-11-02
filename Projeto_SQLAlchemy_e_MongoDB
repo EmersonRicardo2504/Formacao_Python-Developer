@@ -1,0 +1,247 @@
+#   realizando imports do sqlalchemy
+
+from sqlalchemy import Column, func
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import inspect
+from sqlalchemy import select
+from sqlalchemy.engine import create
+from sqlalchemy.orm import declarative_base, Session
+from sqlalchemy.orm import relationship
+
+#   realizando imports do mongoDB
+
+import pprint
+from datetime import datetime
+
+import pymongo
+import pymongo as pyM
+
+#   criando base
+Base = declarative_base()
+
+
+#   criando classe USER() para receber variavel BASE como herança
+
+class Cliente(Base):
+    __tablename__ = "User_account"
+
+    # atributos
+    id = Column(Integer, primary_key=True)
+    nome = Column(String)
+    cpf = Column(String(30), nullable=False)
+    email = Column(String(30), nullable=False)
+
+    #   definindo relação
+    conta = relationship(
+            "Conta", back_populates="User_account"
+
+    )
+
+    #   Def. Para retornar informações
+
+    def __repr__(self):
+        return f'User(id={self.id}, nome{self.nome}, cpf={self.cpf}, email={self.email})'
+
+
+#   montando classe Conta
+
+class Conta(Base):
+    __tablename__ = 'Conta'
+
+    #   atributos
+    id = Column(Integer, primary_key=True)
+    tipo = Column(String)
+    agencia = Column(String)
+    numero = Column(Integer)
+    id_cliente = Column(Integer)
+    saldo = Column(Integer)
+
+    #   definindo relação
+    conta = relationship(
+        "User_account", back_populates="Conta"
+
+    )
+
+    # Def. Para retornar informações
+    def __repr__(self):
+
+        print('-'*60)
+        return f'Conta(id={self.id}, tipo={self.tipo}, agencia={self.agencia}, numero={self.numero}, id_cliete={self.id_cliente}, saldo={self.saldo})'
+
+
+#   realizando impressão do nome da tabela
+print('*'*60)
+print('Table of user:', Cliente.__tablename__)
+
+print('-'*60)
+
+#   realizando impressão da segunda tabela
+print('Table of the account:', Conta.__tablename__)
+print('*'*60)
+
+#   criando conexão com o banco de dados
+engine = create.engine('sqlite://')
+
+#   criando classe como tabela no banco de dados
+Base.metadata.create_all(engine)
+
+#   investigando o esquema dos dados
+inspetor_engine = inspect(engine)
+print(inspetor_engine.has_table('user_account'))
+print(inspetor_engine.get_table_names())
+print(inspetor_engine.default_schema_name)
+
+#   criando informações para o banco de dados
+with Session(engine) as session:
+
+    Emerson = Cliente(
+
+        nome='Emerson Ricardo de Oliveira Silva',
+        cpf=000000000-00,
+        email=[Cliente(email='emerson.teste@gmail.com')]
+
+    )
+
+    Teste = Cliente(
+
+        nome='Teste',
+        cpf=000000000 - 00,
+        email=[Cliente(email='teste.teste@gmail.com')]
+
+    )
+
+    #   enviando para o banco de dados (persistindo dados)
+    session.add_all([Emerson, Teste])
+    session.commit()
+
+#   realizando chamada ordenada
+stmt = select(Cliente).where(Cliente.nome.in_(['Emerson']))
+print('Recuparando informações a partir da condição de fitragem!')
+for cliente in session.scarls(stmt):
+    print(cliente)
+
+#   recuperando informações
+stmt_ordem = select(Cliente).order_by(Cliente.nome.desc())
+print('Recuperando dados de forma ordenada!')
+for resultado in session.scarls(stmt_ordem):
+    print(resultado)
+
+# recuperando informações
+stmt_join = select(Cliente.nome, Cliente.id).join_from(Conta, Cliente)
+print('\n')
+for resultado in session.scarls(stmt_join):
+    print(resultado)
+
+#   criando conexão
+connection = engine.connect()
+results = connection.execute(stmt_join).fetchall()
+print('\nExecutando statement a partir da conexão!')
+for results in results:
+    print(results)
+
+#   validando numeros de STMT
+stmt_count = select(func.count('*'). select_from(Cliente))
+print('\nTotal de instancias em cliente!')
+for results in session.scarls(stmt_count):
+    print(results)
+
+
+#   integração com mongoDB
+
+client = pyM.MongoClient("mongodb+srv://emersonricardo153:Neno1533@teste01.cubwoie.mongodb.net/")
+
+db = client.test
+collection = db.teste_collection
+print(db.list_collection_names())
+
+# definição de info para determinar o doc
+post = {
+    "author": "Emerson",
+    "text": "My first mongodb aplication based on python and SqlAlchemy",
+    "tags": ["mongo", "python3", "pymongo"],
+    "date": datetime.utcnow(),
+}
+
+
+# preparando para submeter as infos
+posts = db.posts
+post_id = posts.insert_one(post).inserted_id
+print(post_id)
+
+print("\n")
+print(db.posts.find_one())
+
+print("\n")
+pprint.pprint(db.posts.find_one())
+
+#bulk inserts
+new_posts = [{
+        "author": "teste_01",
+        "text": "Another post",
+        "tags": ["bulk", "post", "insert"],
+        "date": datetime.utcnow()
+         },
+         {
+        "author": "teste_02",
+        "text": "post from Joao. New post available",
+        "title": "Mongo is fun",
+        "date": datetime(2009, 11, 10, 10, 45)
+
+}]
+
+result = posts.insert_many(new_posts)
+print(result.inserted_ids)
+
+print("\nrecuperação final")
+pprint.pprint(db.posts.find_one({"author": "teste_1"}))
+
+print("\n")
+pprint.pprint(db.posts.find_one({"author": "teste_2"}))
+
+print(posts.find())
+
+print('\n')
+# recuperando estrutura de dados na coleção posts
+print("Documentos dentro da coleção post ")
+for post in posts.find():
+    pprint.pprint(posts)
+
+#   operação para contas os posts
+print("\n")
+print(posts.count_documents({}))
+
+#    recuparação para determinado paramêtro
+print(posts.count_documents({"author": "teste_1"}))
+
+pprint.pprint(posts.find({"tags": "insert"}))
+
+# Definindo estrutura de recuperação post de maneira ordenada
+print("Mostrando informações de forma ordenada")
+print("\n")
+for posts in posts.find({}).sort("date"):
+    print(posts)
+
+result = db.profiles.create_index([('author', pymongo.ASCENDING)],
+                                  unique=True)
+
+print(sorted(list(db.profiles.index_information())))
+
+
+user_profile_user = [
+    {"user": 123, 'name':"teste_1"},
+    {"user": 567, 'name': "teste_2"},
+
+]
+
+result = db.profile_user.insert_many(user_profile_user)
+
+collections = db.list_collection_names()
+
+print("Coleção armazenada no mongoDB\n")
+for collection in collections:
+    print(collection)
+
+
+client.drop_database('test')
+print(db.list_collection_names())
