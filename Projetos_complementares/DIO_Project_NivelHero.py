@@ -147,6 +147,9 @@ def consulta_XP():
             print("*" * 60)  # separador de linhas
             return
 
+    while inicia_programa == 0:
+        print('Programa encerrado!')
+        break
 
         break
 
